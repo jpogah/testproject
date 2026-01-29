@@ -5,3 +5,24 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.venv/
+
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+myproject
+
+# Go test/coverage
+*.test
+*.out
+coverage.html
+
+# Go workspace
+go.work
+go.work.sum
+
+# Vendor directory
+vendor/
