@@ -8,6 +8,10 @@ app.use(express.json());
 let tasks = [];
 let nextId = 1;
 
+// In-memory storage for shortened URLs
+let links = [];
+let nextLinkId = 1;
+
 // GET /tasks - List all tasks
 app.get('/tasks', (req, res) => {
   res.json(tasks);
@@ -79,6 +83,58 @@ app.delete('/tasks/:id', (req, res) => {
 
   tasks.splice(taskIndex, 1);
   res.status(204).send();
+});
+
+// POST /links - Create a new shortened link
+app.post('/links', (req, res) => {
+  const { original_url, short_code, expires_at } = req.body;
+
+  if (!original_url) {
+    return res.status(400).json({ error: 'original_url is required' });
+  }
+
+  if (!short_code) {
+    return res.status(400).json({ error: 'short_code is required' });
+  }
+
+  const existingLink = links.find(l => l.short_code === short_code);
+  if (existingLink) {
+    return res.status(409).json({ error: 'short_code already exists' });
+  }
+
+  const link = {
+    id: nextLinkId++,
+    original_url,
+    short_code,
+    click_count: 0,
+    created_at: new Date().toISOString(),
+    expires_at: expires_at || null
+  };
+
+  links.push(link);
+  res.status(201).json(link);
+});
+
+// GET /links - List all links
+app.get('/links', (req, res) => {
+  res.json(links);
+});
+
+// GET /:shortCode - Redirect to original URL
+app.get('/:shortCode', (req, res) => {
+  const { shortCode } = req.params;
+  const link = links.find(l => l.short_code === shortCode);
+
+  if (!link) {
+    return res.status(404).json({ error: 'Link not found' });
+  }
+
+  if (link.expires_at && new Date(link.expires_at) < new Date()) {
+    return res.status(410).json({ error: 'Link has expired' });
+  }
+
+  link.click_count++;
+  res.redirect(307, link.original_url);
 });
 
 app.listen(PORT, () => {
