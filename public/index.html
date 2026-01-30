@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Shortener</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Link Shortener</h1>
+
+    <form id="shorten-form" class="space-y-4">
+      <div>
+        <label for="url-input" class="block text-sm font-medium text-gray-700 mb-1">
+          Enter URL to shorten
+        </label>
+        <input
+          type="url"
+          id="url-input"
+          name="url"
+          placeholder="https://example.com/your-long-url"
+          required
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+        />
+      </div>
+
+      <button
+        type="submit"
+        id="submit-btn"
+        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition font-medium"
+      >
+        Shorten URL
+      </button>
+    </form>
+
+    <div id="error-message" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm"></div>
+
+    <div id="result-container" class="hidden mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+      <p class="text-sm text-gray-600 mb-2">Your shortened URL:</p>
+      <div class="flex items-center space-x-2">
+        <input
+          type="text"
+          id="short-url"
+          readonly
+          class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-800 text-sm"
+        />
+        <button
+          id="copy-btn"
+          class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition text-sm font-medium"
+        >
+          Copy
+        </button>
+      </div>
+      <p id="copy-feedback" class="hidden mt-2 text-sm text-green-600">Copied to clipboard!</p>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('shorten-form');
+    const urlInput = document.getElementById('url-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorMessage = document.getElementById('error-message');
+    const resultContainer = document.getElementById('result-container');
+    const shortUrlInput = document.getElementById('short-url');
+    const copyBtn = document.getElementById('copy-btn');
+    const copyFeedback = document.getElementById('copy-feedback');
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.remove('hidden');
+      resultContainer.classList.add('hidden');
+    }
+
+    function hideError() {
+      errorMessage.classList.add('hidden');
+    }
+
+    function showResult(shortUrl) {
+      shortUrlInput.value = shortUrl;
+      resultContainer.classList.remove('hidden');
+      copyFeedback.classList.add('hidden');
+    }
+
+    function setLoading(loading) {
+      submitBtn.disabled = loading;
+      submitBtn.textContent = loading ? 'Shortening...' : 'Shorten URL';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const url = urlInput.value.trim();
+      if (!url) {
+        showError('Please enter a URL');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await fetch('/api/shorten', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showError(data.error || 'Failed to shorten URL');
+          return;
+        }
+
+        showResult(data.shortUrl);
+      } catch (err) {
+        showError('Network error. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(shortUrlInput.value);
+        copyFeedback.classList.remove('hidden');
+        setTimeout(() => copyFeedback.classList.add('hidden'), 2000);
+      } catch (err) {
+        shortUrlInput.select();
+        document.execCommand('copy');
+        copyFeedback.classList.remove('hidden');
+        setTimeout(() => copyFeedback.classList.add('hidden'), 2000);
+      }
+    });
+  </script>
+</body>
+</html>
