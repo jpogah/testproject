@@ -29,3 +29,6 @@ vendor/
 
 # Node
 node_modules/
+
+# SQLite database
+urls.db
