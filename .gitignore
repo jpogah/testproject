@@ -29,3 +29,8 @@ vendor/
 
 # Node
 node_modules/
+
+# SQLite database files
+*.db
+*.db-wal
+*.db-shm
