@@ -29,3 +29,12 @@ vendor/
 
 # Node
 node_modules/
+
+# Next.js
+.next/
+out/
+.vercel
+
+# Database
+*.db
+*.db-journal
