@@ -1,12 +1,75 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory storage for tasks
 let tasks = [];
 let nextId = 1;
+
+// In-memory storage for shortened URLs
+const urlStore = new Map();
+
+function generateShortCode() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+function isValidUrl(string) {
+  try {
+    const url = new URL(string);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+// POST /api/shorten - Create a shortened URL
+app.post('/api/shorten', (req, res) => {
+  const { url } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
+  }
+
+  if (!isValidUrl(url)) {
+    return res.status(400).json({ error: 'Invalid URL. Must be a valid HTTP or HTTPS URL.' });
+  }
+
+  let shortCode = generateShortCode();
+  while (urlStore.has(shortCode)) {
+    shortCode = generateShortCode();
+  }
+
+  urlStore.set(shortCode, {
+    originalUrl: url,
+    createdAt: new Date().toISOString(),
+    clicks: 0
+  });
+
+  const shortUrl = `${req.protocol}://${req.get('host')}/${shortCode}`;
+  res.status(201).json({ shortCode, shortUrl, originalUrl: url });
+});
+
+// GET /:code - Redirect to original URL
+app.get('/:code([a-zA-Z0-9]{6})', (req, res) => {
+  const { code } = req.params;
+  const entry = urlStore.get(code);
+
+  if (!entry) {
+    return res.status(404).json({ error: 'Short URL not found' });
+  }
+
+  entry.clicks++;
+  res.redirect(301, entry.originalUrl);
+});
 
 // GET /tasks - List all tasks
 app.get('/tasks', (req, res) => {
